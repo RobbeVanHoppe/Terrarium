@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Temperature Monitor</title>
+    <script>
+        async function fetchTemperature() {
+            try {
+                console.log('Fetching temperature...'); // Log fetch attempts
+                const response = await fetch('/temperature');
+                const text = await response.text();
+                console.log('Temperature fetched:', text); // Log fetched temperature
+                document.getElementById('temperature').innerText = 'Temperature: ' + text;
+            } catch (error) {
+                console.error('Error fetching temperature:', error); // Log errors
+            }
+        }
+
+        setInterval(fetchTemperature, 1000); // Fetch temperature every second
+    </script>
+</head>
+<body onload="fetchTemperature()">
+    <h1>Temperature Monitor</h1>
+    <p id="temperature">Loading...</p>
+</body>
+</html>
