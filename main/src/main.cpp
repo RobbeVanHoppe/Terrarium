@@ -18,6 +18,9 @@ static EventGroupHandle_t s_wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
 
 float temperature;
+float temperature_cutoff = 20.0f;
+
+/// @brief Wifi setup
 
 void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -85,6 +88,9 @@ void init_spiffs() {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
 }
+
+
+/// @brief Main program loop
 
 extern "C" void app_main(void) {
     // Initialize NVS

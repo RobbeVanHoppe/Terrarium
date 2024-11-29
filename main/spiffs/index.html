@@ -15,11 +15,33 @@
             }
         }
 
+        async function updateTemperatureCutoff() {
+            const newTemperature = document.getElementById('temp_cutoff').value;
+            try {
+                const response = await fetch('/update_temp_cutoff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ temperature_cutoff: parseFloat(newTemperature) })
+                });
+                const result = await response.text();
+                console.log('Update result:', result);
+                document.getElementById('update_result').innerText = result;
+            } catch (error) {
+                console.error('Error updating temperature cutoff:', error);
+            }
+        }
+
         setInterval(fetchTemperature, 1000); // Fetch temperature every second
     </script>
 </head>
 <body onload="fetchTemperature()">
     <h1>Temperature Monitor</h1>
     <p id="temperature">Loading...</p>
+    <h2>Update Temperature Cutoff</h2>
+    <input type="number" id="temp_cutoff" placeholder="Enter new temperature cutoff">
+    <button onclick="updateTemperatureCutoff()">Update</button>
+    <p id="update_result"></p>
 </body>
 </html>
