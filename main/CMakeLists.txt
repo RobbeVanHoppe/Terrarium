@@ -1,5 +1,6 @@
 idf_component_register(SRCS "src/main.cpp"
                             "src/web_server.cpp"
+                            "src/heating.cpp"
                     INCLUDE_DIRS "include"
                     EMBED_TXTFILES "spiffs/index.html")
 

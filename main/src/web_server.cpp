@@ -9,7 +9,7 @@ static httpd_handle_t server = NULL;
 extern float temperature;
 extern float temperature_cutoff;
 
-/// @brief Handlera for getting the temperature, index and updating the temperature cutoff
+/// @brief Handler for getting the temperature, index and updating the temperature cutoff
 
 esp_err_t temperature_get_handler(httpd_req_t *req)
 {
@@ -22,18 +22,33 @@ esp_err_t temperature_get_handler(httpd_req_t *req)
 esp_err_t index_get_handler(httpd_req_t *req)
 {
     FILE* f = fopen("/spiffs/index.html", "r");
-
-        if (f == NULL) {
+    if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open index file for reading");
         httpd_resp_send_404(req);
         return ESP_FAIL;
     }
 
-    char buf[2048]; // page size 
-    size_t read_bytes = fread(buf, 1, sizeof(buf), f);
+    // Allocate buffer for file content
+    char *buf = (char *)malloc(4098); // Adjust size as needed
+    if (buf == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for file content");
+        fclose(f);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    size_t read_bytes = fread(buf, 1, 4098, f);
     fclose(f);
 
+    if (read_bytes == 0) {
+        ESP_LOGE(TAG, "Failed to read file content");
+        free(buf);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
     httpd_resp_send(req, buf, read_bytes);
+    free(buf);
     return ESP_OK;
 }
 
@@ -131,7 +146,7 @@ void stop_webserver()
 /// @brief Update the temperature cutoff
 
 esp_err_t update_temperature_cutoff(float new_temperature) {
-    if (new_temperature < 25.0f || new_temperature > 40.0f) {
+    if (new_temperature < 20.0f || new_temperature > 40.0f) {
         return ESP_ERR_INVALID_ARG;
     }
     temperature_cutoff = new_temperature;

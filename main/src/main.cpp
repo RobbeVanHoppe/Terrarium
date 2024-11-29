@@ -1,7 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-#include "ds18x20.h"
+#include "freertos/timers.h"
 #include "esp_log.h"
 #include "web_server.h"
 #include "esp_wifi.h"
@@ -9,6 +9,8 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include <esp_spiffs.h>
+#include "heating.h"
+#include <driver/gpio.h>
 
 char buf[16];
 int buflen = 16;
@@ -16,9 +18,6 @@ int buflen = 16;
 static const char *TAG = "main";
 static EventGroupHandle_t s_wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
-
-float temperature;
-float temperature_cutoff = 20.0f;
 
 /// @brief Wifi setup
 
@@ -110,29 +109,19 @@ extern "C" void app_main(void) {
     // Wait for Wi-Fi connection
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    const gpio_num_t sensor_gpio = GPIO_NUM_4;
-    size_t addr_count = 1;
-    size_t found_addr_count;
-    onewire_addr_t addr_list[addr_count];
-
-    // Scan for sensors
-    if (ds18x20_scan_devices(sensor_gpio, addr_list, addr_count, &found_addr_count) != ESP_OK) {
-        ESP_LOGE("DS18B20", "No sensors detected!");
-        return;
-    } else {
-        ESP_LOGI("DS18B20", "Sensor found at address: 0x%016llx", addr_list[0]);
-    }
+    // Initialize temperature sensor and heating control
+    init_temperature_sensor();
 
     // Start the web server
     start_webserver();
 
+    // Create a task to handle temperature checks
+    if(xTaskCreate(&temperature_control_task, "temperature_control_task", 4096, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create temperature control task");
+    }
+
+    // Main loop can handle other tasks or remain empty
     while (1) {
-        esp_err_t res = ds18x20_measure_and_read(sensor_gpio, addr_list[0], &temperature);
-        if (res == ESP_OK) {
-            printf("Temperatuure: %.2f\n", temperature);
-        } else {
-            printf("Could not read temperature\n");
-        }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

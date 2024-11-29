@@ -2,6 +2,9 @@
 <html>
 <head>
     <title>Temperature Monitor</title>
+    <meta charset="utf-8">
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <script>
         async function fetchTemperature() {
             try {
@@ -9,25 +12,37 @@
                 const response = await fetch('/temperature');
                 const text = await response.text();
                 console.log('Temperature fetched:', text); // Log fetched temperature
-                document.getElementById('temperature').innerText = 'Temperature: ' + text;
+                document.getElementById('temperature').innerText = `Current Temperature: ${text}C`;
+                document.getElementById('temp_cutoff').innerText = parseFloat(text) + 1;
             } catch (error) {
                 console.error('Error fetching temperature:', error); // Log errors
             }
         }
 
-        async function updateTemperatureCutoff() {
-            const newTemperature = document.getElementById('temp_cutoff').value;
+        async function updateTemperatureCutoff(action) {
+            let currentCutoff = parseFloat(document.getElementById('temp_cutoff').innerText);
+            if (action === 'increase10') {
+                currentCutoff += 1;
+            } else if (action === 'decrease10') {
+                currentCutoff -= 1;
+            } else if (action === 'increase5') {
+                currentCutoff += 0.5;
+            } else if (action === 'decrease5') {
+                currentCutoff -= 0.5;
+            }
+
             try {
                 const response = await fetch('/update_temp_cutoff', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ temperature_cutoff: parseFloat(newTemperature) })
+                    body: JSON.stringify({ temperature_cutoff: currentCutoff })
                 });
                 const result = await response.text();
                 console.log('Update result:', result);
                 document.getElementById('update_result').innerText = result;
+                document.getElementById('temp_cutoff').innerText = currentCutoff;
             } catch (error) {
                 console.error('Error updating temperature cutoff:', error);
             }
@@ -36,12 +51,27 @@
         setInterval(fetchTemperature, 1000); // Fetch temperature every second
     </script>
 </head>
-<body onload="fetchTemperature()">
-    <h1>Temperature Monitor</h1>
-    <p id="temperature">Loading...</p>
-    <h2>Update Temperature Cutoff</h2>
-    <input type="number" id="temp_cutoff" placeholder="Enter new temperature cutoff">
-    <button onclick="updateTemperatureCutoff()">Update</button>
-    <p id="update_result"></p>
+<body onload="fetchTemperature()" class="container mt-5">
+    <div class="card">
+        <div class="card-body text-center">
+            <h1 class="card-title">Temperature Monitor</h1>
+            <h4 id="temperature" class="card-text">Loading...</h4>
+        </div>
+        <div class="card-body text-center">
+            <h4 class="card-title mb-4">Update Temperature Cutoff</h4>
+            <div class="form-group d-flex justify-content-center align-items-center ">
+                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('decrease5')">-0.5</button>
+                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('decrease10')">-1.0</button>
+                <h4 id="temp_cutoff" class="mx-2">23.0</h4>
+                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('increase5')">+0.5</button>
+                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('increase10')">+1.0</button>
+            </div>
+            <p id="update_result" class="mt-3"></p>
+        </div>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
