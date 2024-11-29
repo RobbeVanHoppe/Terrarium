@@ -13,7 +13,6 @@
                 const text = await response.text();
                 console.log('Temperature fetched:', text); // Log fetched temperature
                 document.getElementById('temperature').innerText = `Current Temperature: ${text}C`;
-                document.getElementById('temp_cutoff').innerText = parseFloat(text) + 1;
             } catch (error) {
                 console.error('Error fetching temperature:', error); // Log errors
             }
@@ -29,7 +28,7 @@
                 currentCutoff += 0.5;
             } else if (action === 'decrease5') {
                 currentCutoff -= 0.5;
-            }
+            } 
 
             try {
                 const response = await fetch('/update_temp_cutoff', {
@@ -42,6 +41,9 @@
                 const result = await response.text();
                 console.log('Update result:', result);
                 document.getElementById('update_result').innerText = result;
+                setTimeout(() => {
+                    document.getElementById('update_result').innerText = '';
+                }, 3000);
                 document.getElementById('temp_cutoff').innerText = currentCutoff;
             } catch (error) {
                 console.error('Error updating temperature cutoff:', error);
@@ -60,9 +62,9 @@
         <div class="card-body text-center">
             <h4 class="card-title mb-4">Update Temperature Cutoff</h4>
             <div class="form-group d-flex justify-content-center align-items-center ">
-                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('decrease5')">-0.5</button>
                 <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('decrease10')">-1.0</button>
-                <h4 id="temp_cutoff" class="mx-2">23.0</h4>
+                <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('decrease5')">-0.5</button>
+                <h4 id="temp_cutoff" class="mx-2">25.0</h4>
                 <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('increase5')">+0.5</button>
                 <button class="btn btn-primary mx-2" onclick="updateTemperatureCutoff('increase10')">+1.0</button>
             </div>

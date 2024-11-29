@@ -56,6 +56,7 @@ void temperature_control_task(void *pvParameter) {
                 ESP_LOGE(TAG, "Failed to turn off heating");
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
