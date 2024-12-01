@@ -109,8 +109,10 @@ extern "C" void app_main(void) {
     // Wait for Wi-Fi connection
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    // Initialize temperature sensor and heating control
-    init_temperature_sensor();
+    // Create a task to handle temperature checks
+    if(xTaskCreate(&temp_sensor_setup_task, "temp_sensor_setup_task", 4096, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create temp sensor setup task");
+    }
 
     // Start the web server
     start_webserver();
