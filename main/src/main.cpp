@@ -10,6 +10,7 @@
 #include "esp_netif.h"
 #include <esp_spiffs.h>
 #include "heating.h"
+#include "secrets_loader.h"
 #include <driver/gpio.h>
 
 char buf[16];
@@ -21,20 +22,27 @@ const int WIFI_CONNECTED_BIT = BIT0;
 
 /// @brief Wifi setup
 
-void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+    {
         esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    }
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
+    {
         esp_wifi_connect();
         ESP_LOGI(TAG, "Retrying to connect to the AP");
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+    }
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+    {
+        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "Got IP: %s", esp_ip4addr_ntoa(&event->ip_info.ip, buf, buflen));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
-void wifi_init_sta() {
+void wifi_init_sta()
+{
     s_wifi_event_group = xEventGroupCreate();
     esp_netif_init();
     esp_event_loop_create_default();
@@ -45,34 +53,47 @@ void wifi_init_sta() {
     esp_event_handler_instance_t instance_got_ip;
     esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, &instance_any_id);
     esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, &instance_got_ip);
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = "stud-2024",
-            .password = "Stud3nt5",
-        },
-    };
+
+    auto secrets = loadSecrets("/spiffs/secrets.env");
+    wifi_config_t wifi_config = {};
+    copy_cstr((char *)wifi_config.sta.ssid, secrets["WIFI_NETWORK"].c_str(), sizeof(wifi_config.sta.ssid));
+    copy_cstr((char *)wifi_config.sta.password, secrets["WIFI_PASSWORD"].c_str(), sizeof(wifi_config.sta.password));
+    ESP_LOGI(TAG, "Connecting to %s", wifi_config.sta.ssid);
+    ESP_LOGI(TAG, "Password: %s", wifi_config.sta.password);
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-    esp_wifi_start();
+    if (esp_wifi_start() != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to start Wi-Fi");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Wi-Fi started, connecting to %s", wifi_config.sta.ssid);
 }
 
-void init_spiffs() {
+void init_spiffs()
+{
     esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true};
 
     // Initialize SPIFFS
     esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
+    if (ret != ESP_OK)
+    {
+        if (ret == ESP_FAIL)
+        {
             ESP_LOGE(TAG, "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
+        }
+        else if (ret == ESP_ERR_NOT_FOUND)
+        {
             ESP_LOGE(TAG, "Failed to find SPIFFS partition");
-        } else {
+        }
+        else
+        {
             ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
         return;
@@ -81,20 +102,24 @@ void init_spiffs() {
 
     size_t total = 0, used = 0;
     ret = esp_spiffs_info(NULL, &total, &used);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
+    }
+    else
+    {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
 }
 
-
 /// @brief Main program loop
 
-extern "C" void app_main(void) {
+extern "C" void app_main(void)
+{
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
@@ -110,7 +135,8 @@ extern "C" void app_main(void) {
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     // Create a task to handle temperature checks
-    if(xTaskCreate(&temp_sensor_setup_task, "temp_sensor_setup_task", 4096, NULL, 5, NULL) != pdPASS) {
+    if (xTaskCreate(&temp_sensor_setup_task, "temp_sensor_setup_task", 4096, NULL, 5, NULL) != pdPASS)
+    {
         ESP_LOGE(TAG, "Failed to create temp sensor setup task");
     }
 
@@ -118,12 +144,18 @@ extern "C" void app_main(void) {
     start_webserver();
 
     // Create a task to handle temperature checks
-    if(xTaskCreate(&temperature_control_task, "temperature_control_task", 4096, NULL, 5, NULL) != pdPASS) {
+    if (xTaskCreate(&temperature_control_task, "temperature_control_task", 4096, NULL, 5, NULL) != pdPASS)
+    {
         ESP_LOGE(TAG, "Failed to create temperature control task");
     }
+    else    
+    {
+        ESP_LOGI(TAG, "Temperature control task created successfully");
+    }
 
-    // Main loop can handle other tasks or remain empty
-    while (1) {
+    // Main loop
+    while (1)
+    {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
